@@ -5,6 +5,8 @@
 #include <cstring>
 #include <iomanip>
 #include <errno.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 using namespace std;
 using namespace chrono;
@@ -35,15 +37,18 @@ void copy_file(const char* input, const char* output, size_t block_size) {
         return;
     }
 
-    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC | O_SYNC, 0666);
+    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (dest < 0) {
         cerr << "Error opening output file: " << strerror(errno) << endl;
         close(src);
         return;
     }
 
-    off_t total_size = lseek(src, 0, SEEK_END);
-    lseek(src, 0, SEEK_SET);
+    struct stat st;
+    fstat(src, &st);
+    off_t total_size = st.st_size;
+
+    posix_fadvise(src, 0, 0, POSIX_FADV_SEQUENTIAL);  // Hint kernel for sequential read
 
     char* buffer = new char[block_size];
     size_t bytes_copied = 0;
@@ -60,11 +65,6 @@ void copy_file(const char* input, const char* output, size_t block_size) {
         bytes_copied += bytes_written;
         blocks_copied++;
 
-        // Periodic flush every 64MB to avoid delaying close()
-        if (blocks_copied % (64 * 1024 * 1024 / block_size) == 0) {
-            fdatasync(dest);
-        }
-
         auto now = steady_clock::now();
         duration<double> elapsed = now - start_time;
         double speed = bytes_copied / elapsed.count();
@@ -72,13 +72,18 @@ void copy_file(const char* input, const char* output, size_t block_size) {
     }
 
     delete[] buffer;
-    fdatasync(dest);  // Ensure all data is flushed before closing
+
+    fsync(dest);  // Sync once at the end for efficiency
     close(dest);
     close(src);
     cout << "\nCopy complete! " << bytes_copied << " bytes copied in " << blocks_copied << " blocks." << endl;
 }
 
 int main(int argc, char* argv[]) {
+    if (argc != 5) {
+        cerr << "Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;
+        return 1;
+    }
 
     const char* input = nullptr;
     const char* output = nullptr;

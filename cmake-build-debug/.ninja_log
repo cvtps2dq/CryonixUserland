@@ -1,18 +1,5 @@
 # ninja log v6
 0	470	1738506670036077065	CMakeFiles/CryonixUserland.dir/main.cpp.o	217066b36446d74c
 3	540	1738517903882945895	CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o	141fdff508b2eef
-540	623	1738517904419609175	CryonixUserland	f3ef83a9e0cf1da4
-4	615	1738518858557956183	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
-2	37	1738518876833734172	CryonixUserland	21f6ee7cf3ab3f6b
-9	662	1738519377379663581	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
-662	752	1738519378033020530	CryonixUserland	21f6ee7cf3ab3f6b
-3	514	1738519549369417190	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
-514	544	1738519549879821760	CryonixUserland	21f6ee7cf3ab3f6b
-4	537	1738519620675820222	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
-538	567	1738519621208935162	CryonixUserland	21f6ee7cf3ab3f6b
-5	542	1738519778030750407	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
-542	572	1738519778568259453	CryonixUserland	21f6ee7cf3ab3f6b
-4	687	1738520049215554059	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
-687	775	1738520049898252847	CryonixUserland	21f6ee7cf3ab3f6b
-4	652	1738520804496213434	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217
 652	740	1738520805143986470	CryonixUserland	21f6ee7cf3ab3f6b
+4	652	1738520804496213434	CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o	4caaa6595dbe7217

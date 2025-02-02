@@ -49,11 +49,23 @@ cmake_ninja_workdir = /Users/cv2/CryonixUserland/cmake-build-debug/
 
 build cmake_object_order_depends_target_CryonixUserland: phony || .
 
-build CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o: CXX_COMPILER__CryonixUserland_unscanned_Debug /Users/cv2/CryonixUserland/land-utils/chmod/chmod.cpp || cmake_object_order_depends_target_CryonixUserland
-  DEP_FILE = CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o.d
+build CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o: CXX_COMPILER__CryonixUserland_unscanned_Debug /Users/cv2/CryonixUserland/land-utils/dd/dd.cpp || cmake_object_order_depends_target_CryonixUserland
+  DEP_FILE = CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o.d
   FLAGS = -g -std=gnu++2b -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk -fcolor-diagnostics
   OBJECT_DIR = CMakeFiles/CryonixUserland.dir
-  OBJECT_FILE_DIR = CMakeFiles/CryonixUserland.dir/land-utils/chmod
+  OBJECT_FILE_DIR = CMakeFiles/CryonixUserland.dir/land-utils/dd
+
+build CMakeFiles/CryonixUserland.dir/land-utils/fox/fox.cpp.o: CXX_COMPILER__CryonixUserland_unscanned_Debug /Users/cv2/CryonixUserland/land-utils/fox/fox.cpp || cmake_object_order_depends_target_CryonixUserland
+  DEP_FILE = CMakeFiles/CryonixUserland.dir/land-utils/fox/fox.cpp.o.d
+  FLAGS = -g -std=gnu++2b -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/CryonixUserland.dir
+  OBJECT_FILE_DIR = CMakeFiles/CryonixUserland.dir/land-utils/fox
+
+build CMakeFiles/CryonixUserland.dir/land-utils/say/say.cpp.o: CXX_COMPILER__CryonixUserland_unscanned_Debug /Users/cv2/CryonixUserland/land-utils/say/say.cpp || cmake_object_order_depends_target_CryonixUserland
+  DEP_FILE = CMakeFiles/CryonixUserland.dir/land-utils/say/say.cpp.o.d
+  FLAGS = -g -std=gnu++2b -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/CryonixUserland.dir
+  OBJECT_FILE_DIR = CMakeFiles/CryonixUserland.dir/land-utils/say
 
 
 # =============================================================================
@@ -63,7 +75,7 @@ build CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o: CXX_COMPILER_
 #############################################
 # Link the executable CryonixUserland
 
-build CryonixUserland: CXX_EXECUTABLE_LINKER__CryonixUserland_Debug CMakeFiles/CryonixUserland.dir/land-utils/chmod/chmod.cpp.o
+build CryonixUserland: CXX_EXECUTABLE_LINKER__CryonixUserland_Debug CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o CMakeFiles/CryonixUserland.dir/land-utils/fox/fox.cpp.o CMakeFiles/CryonixUserland.dir/land-utils/say/say.cpp.o
   FLAGS = -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk
   OBJECT_DIR = CMakeFiles/CryonixUserland.dir
   POST_BUILD = :

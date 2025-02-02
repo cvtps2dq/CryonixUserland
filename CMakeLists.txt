@@ -7,4 +7,5 @@ add_executable(CryonixUserland
         land-utils/dd/dd.cpp
         land-utils/fox/fox.cpp
         land-utils/say/say.cpp
+		land-utils/modech/modech.cpp
 	)

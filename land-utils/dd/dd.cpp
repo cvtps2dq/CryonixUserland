@@ -13,6 +13,19 @@
 #include <thread>
 #include <atomic>
 
+// ANSI color codes
+namespace Colors {
+    constexpr auto RESET = "\033[0m";
+    constexpr auto RED = "\033[31m";
+    constexpr auto GREEN = "\033[32m";
+    constexpr auto YELLOW = "\033[33m";
+    constexpr auto BLUE = "\033[34m";
+    constexpr auto MAGENTA = "\033[35m";
+    constexpr auto CYAN = "\033[36m";
+    constexpr auto WHITE = "\033[37m";
+    constexpr auto BOLD = "\033[1m";
+}
+
 struct Config {
     std::string input = "stdin";
     std::string output = "stdout";
@@ -31,12 +44,16 @@ public:
     explicit FileWrapper(const Config& cfg) {
         if (cfg.input != "stdin") {
             infile.open(cfg.input, std::ios::binary);
+            std::cout << Colors::BLUE
+            << "opening input file: " << cfg.input << Colors::RESET << std::endl;
             if (!infile) throw std::runtime_error("input file error");
             in = &infile;
         }
 
         if (cfg.output != "stdout") {
             outfile.open(cfg.output, std::ios::binary | std::ios::trunc);
+            std::cout << Colors::BLUE
+            << "opening output file: " << cfg.output << Colors::RESET << std::endl;
             if (!outfile) throw std::runtime_error("output file error");
             out = &outfile;
         }
@@ -45,20 +62,6 @@ public:
     std::istream& input() const { return *in; }
     std::ostream& output() const { return *out; }
 };
-
-// ANSI color codes
-namespace Colors {
-    constexpr auto RESET = "\033[0m";
-    constexpr auto RED = "\033[31m";
-    constexpr auto GREEN = "\033[32m";
-    constexpr auto YELLOW = "\033[33m";
-    constexpr auto BLUE = "\033[34m";
-    constexpr auto MAGENTA = "\033[35m";
-    constexpr auto CYAN = "\033[36m";
-    constexpr auto WHITE = "\033[37m";
-    constexpr auto BOLD = "\033[1m";
-}
-
 
 class StatusIndicator {
     std::atomic<bool> running{false};

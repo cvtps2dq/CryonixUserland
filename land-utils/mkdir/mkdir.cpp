@@ -6,7 +6,7 @@
 #include <filesystem>
 
 void print_usage() {
-    std::cout << "Usage: mkdir [-p] DIRECTORY...\n"
+    std::cout << "Usage: mkdir[-p] DIRECTORY...\n"
               << "Create directories.\n\n"
               << "  -p    Create parent directories as needed\n";
 }

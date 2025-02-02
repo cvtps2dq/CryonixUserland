@@ -1,0 +1,3 @@
+/Users/cv2/CryonixUserland/cmake-build-debug/CMakeFiles/CryonixUserland.dir
+/Users/cv2/CryonixUserland/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/cv2/CryonixUserland/cmake-build-debug/CMakeFiles/rebuild_cache.dir

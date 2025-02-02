@@ -1,0 +1,8 @@
+# ninja log v6
+0	470	1738506670036077065	CMakeFiles/CryonixUserland.dir/main.cpp.o	217066b36446d74c
+1	524	1738506670036476528	CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o	141fdff508b2eef
+2	34	1738506707351515277	CryonixUserland	f3ef83a9e0cf1da4
+4	396	1738506731357051925	CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o	141fdff508b2eef
+396	425	1738506731748700123	CryonixUserland	f3ef83a9e0cf1da4
+5	673	1738507644014510972	CMakeFiles/CryonixUserland.dir/land-utils/dd/dd.cpp.o	141fdff508b2eef
+673	763	1738507644682594707	CryonixUserland	f3ef83a9e0cf1da4

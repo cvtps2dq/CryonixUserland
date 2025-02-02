@@ -3,64 +3,31 @@
 //
 
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
-#include <cctype>
-#include <cstdlib>
 #include <chrono>
 #include <iomanip>
-#include <thread>
-#include <atomic>
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <cstdlib>
+#include <atomic>
+#include <thread>
 
 // ANSI color codes
 namespace Colors {
     constexpr auto RESET = "\033[0m";
-    constexpr auto RED = "\033[31m";
     constexpr auto GREEN = "\033[32m";
     constexpr auto YELLOW = "\033[33m";
-    constexpr auto BLUE = "\033[34m";
-    constexpr auto MAGENTA = "\033[35m";
     constexpr auto CYAN = "\033[36m";
-    constexpr auto WHITE = "\033[37m";
-    constexpr auto BOLD = "\033[1m";
+    constexpr auto BLUE = "\033[34m";
 }
 
 struct Config {
-    std::string input = "stdin";
-    std::string output = "stdout";
-    size_t block_size = 512;
+    std::string input = "/dev/stdin";
+    std::string output = "/dev/stdout";
+    size_t block_size = 4 * 1024 * 1024; // Default: 4MB
     size_t count = 0;
     bool progress = false;
-};
-
-class FileWrapper {
-    std::istream* in = &std::cin;
-    std::ostream* out = &std::cout;
-    std::ifstream infile;
-    std::ofstream outfile;
-
-public:
-    explicit FileWrapper(const Config& cfg) {
-        if (cfg.input != "stdin") {
-            infile.open(cfg.input, std::ios::binary);
-            std::cout << Colors::BLUE << "Opening input file: " << cfg.input << Colors::RESET << std::endl;
-            if (!infile) throw std::runtime_error("Error opening input file");
-            in = &infile;
-        }
-
-        if (cfg.output != "stdout") {
-            outfile.open(cfg.output, std::ios::binary | std::ios::trunc);
-            std::cout << Colors::BLUE << "Opening output file: " << cfg.output << Colors::RESET << std::endl;
-            if (!outfile) throw std::runtime_error("Error opening output file");
-            out = &outfile;
-        }
-    }
-
-    std::istream& input() const { return *in; }
-    std::ostream& output() const { return *out; }
 };
 
 class StatusIndicator {
@@ -85,7 +52,6 @@ class StatusIndicator {
 
             double elapsed = duration<double>(now - last_time).count();
             double total_elapsed = duration<double>(now - start_time).count();
-
             size_t blocks_diff = current_blocks - last_block_count;
             double speed = (blocks_diff * block_size) / (elapsed * 1024 * 1024); // MB/s
 
@@ -93,8 +59,7 @@ class StatusIndicator {
                       << Colors::GREEN << "Blocks: " << current_blocks << " " << Colors::RESET
                       << Colors::YELLOW << "Speed: " << std::fixed << std::setprecision(2)
                       << speed << " MB/s" << Colors::RESET
-                      << Colors::MAGENTA << " Total Elapsed: " << total_elapsed << "s " << Colors::RESET
-                      << std::string(10, ' '); // Clear extra characters
+                      << Colors::BLUE << " Total Elapsed: " << total_elapsed << "s " << Colors::RESET;
 
             last_block_count = current_blocks;
             last_time = now;
@@ -110,15 +75,13 @@ public:
         status_thread = std::thread(&StatusIndicator::display_loop, this);
     }
 
-    void increment(size_t count = 1) {
-        blocks_processed += count;
+    void increment() {
+        blocks_processed++;
     }
 
     void stop() {
         running = false;
-        if (status_thread.joinable()) {
-            status_thread.join();
-        }
+        if (status_thread.joinable()) status_thread.join();
 
         auto end_time = std::chrono::steady_clock::now();
         double total_seconds = std::chrono::duration<double>(end_time - start_time).count();
@@ -141,7 +104,7 @@ size_t parse_size(const std::string& s) {
 
     char suffix = (i < s.size()) ? std::toupper(static_cast<unsigned char>(s[i])) : '\0';
 
-    switch(suffix) {
+    switch (suffix) {
         case 'K': return num * 1024;
         case 'M': return num * 1024 * 1024;
         case 'G': return num * 1024 * 1024 * 1024;
@@ -184,38 +147,28 @@ Config parse_args(int argc, char** argv) {
     return cfg;
 }
 
-void fsync_if_needed(const std::string& path) {
-    if (path != "stdout") {
-        int fd = open(path.c_str(), O_WRONLY);
-        if (fd >= 0) {
-            fsync(fd);
-            close(fd);
-        }
-    }
-}
+void transfer_data(const Config& cfg) {
+    int in_fd = (cfg.input == "/dev/stdin") ? STDIN_FILENO : open(cfg.input.c_str(), O_RDONLY);
+    int out_fd = (cfg.output == "/dev/stdout") ? STDOUT_FILENO : open(cfg.output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
-void transfer_data(const FileWrapper& files, const Config& cfg) {
+    if (in_fd < 0) throw std::runtime_error("Failed to open input file");
+    if (out_fd < 0) throw std::runtime_error("Failed to open output file");
+
     std::vector<char> buffer(cfg.block_size);
     StatusIndicator status(cfg.block_size);
-
     if (cfg.progress) status.start();
 
     size_t total_blocks = 0;
 
     while (cfg.count == 0 || total_blocks < cfg.count) {
-        files.input().read(buffer.data(), static_cast<std::streamsize>(cfg.block_size));
-        std::streamsize bytes_read = files.input().gcount();
+        ssize_t bytes_read = read(in_fd, buffer.data(), cfg.block_size);
+        if (bytes_read <= 0) break;
 
-        if (bytes_read > 0) {
-            files.output().write(buffer.data(), bytes_read);
-            files.output().flush();
-            fsync_if_needed(cfg.output);
-            total_blocks++;
-            if (cfg.progress) status.increment();
-        }
+        ssize_t bytes_written = write(out_fd, buffer.data(), bytes_read);
+        if (bytes_written != bytes_read) throw std::runtime_error("Write error");
 
-        if (files.input().eof()) break;
-        if (!files.input().good()) throw std::runtime_error("Read error");
+        total_blocks++;
+        if (cfg.progress) status.increment();
     }
 
     if (cfg.progress) status.stop();
@@ -224,15 +177,17 @@ void transfer_data(const FileWrapper& files, const Config& cfg) {
               << Colors::BLUE << total_blocks << " records out\n"
               << Colors::YELLOW << total_blocks * cfg.block_size << " bytes transferred\n"
               << Colors::RESET;
+
+    close(in_fd);
+    close(out_fd);
 }
 
 int main(int argc, char** argv) {
-    std::cout << "Cryonix Data-Definition v1.0" << std::endl;
+    std::cout << "Cryonix Data-Definition v1.1 (Optimized)\n";
 
     try {
         Config cfg = parse_args(argc, argv);
-        FileWrapper files(cfg);
-        transfer_data(files, cfg);
+        transfer_data(cfg);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return EXIT_FAILURE;

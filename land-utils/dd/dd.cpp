@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 using namespace chrono;
@@ -45,25 +46,35 @@ void copy_file(const char* input, const char* output, size_t block_size) {
     }
 
     struct stat st;
-    fstat(src, &st);
+    if (fstat(src, &st) != 0) {
+        cerr << "Error getting file size: " << strerror(errno) << endl;
+        close(src);
+        close(dest);
+        return;
+    }
     off_t total_size = st.st_size;
 
-    posix_fadvise(src, 0, 0, POSIX_FADV_SEQUENTIAL);  // Hint kernel for sequential read
+    posix_fadvise(src, 0, 0, POSIX_FADV_SEQUENTIAL);  // Optimize for sequential read
 
-    char* buffer = new char[block_size];
+    void* src_map = mmap(nullptr, total_size, PROT_READ, MAP_SHARED, src, 0);
+    if (src_map == MAP_FAILED) {
+        cerr << "Error mapping input file: " << strerror(errno) << endl;
+        close(src);
+        close(dest);
+        return;
+    }
+
     size_t bytes_copied = 0;
-    size_t blocks_copied = 0;
-
     auto start_time = steady_clock::now();
-    ssize_t bytes_read;
-    while ((bytes_read = read(src, buffer, block_size)) > 0) {
-        ssize_t bytes_written = write(dest, buffer, bytes_read);
+
+    for (size_t i = 0; i < total_size; i += block_size) {
+        size_t chunk_size = min(block_size, total_size - i);
+        ssize_t bytes_written = write(dest, (char*)src_map + i, chunk_size);
         if (bytes_written < 0) {
             cerr << "Error writing to file: " << strerror(errno) << endl;
             break;
         }
         bytes_copied += bytes_written;
-        blocks_copied++;
 
         auto now = steady_clock::now();
         duration<double> elapsed = now - start_time;
@@ -71,15 +82,18 @@ void copy_file(const char* input, const char* output, size_t block_size) {
         display_progress(bytes_copied, total_size, speed, elapsed);
     }
 
-    delete[] buffer;
-
-    fsync(dest);  // Sync once at the end for efficiency
+    munmap(src_map, total_size);
+    fsync(dest);  // Ensure all data is flushed before closing
     close(dest);
     close(src);
-    cout << "\nCopy complete! " << bytes_copied << " bytes copied in " << blocks_copied << " blocks." << endl;
+    cout << "\nCopy complete! " << bytes_copied << " bytes copied." << endl;
 }
 
 int main(int argc, char* argv[]) {
+    if (argc != 5) {
+        cerr << "Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;
+        return 1;
+    }
 
     const char* input = nullptr;
     const char* output = nullptr;

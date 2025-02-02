@@ -78,6 +78,7 @@ void transfer_data(const Config& cfg) {
     const auto start_time = std::chrono::steady_clock::now();
 
     while (cfg.count == 0 || blocks_written < cfg.count) {
+        std::cout << Colors::CYAN << "Reading block " << blocks_written << "\n";
         const ssize_t bytes_read = read(in_fd, buffer.data(), cfg.block_size);
 
         if (bytes_read < 0) {

@@ -13,8 +13,9 @@
 #include <atomic>
 #include <thread>
 #include <cstring>
+#include <sys/stat.h>
 
-// ANSI color codes
+// ANSI Colors
 namespace Colors {
     constexpr auto RESET = "\033[0m";
     constexpr auto GREEN = "\033[32m";
@@ -23,14 +24,16 @@ namespace Colors {
     constexpr auto BLUE = "\033[34m";
 }
 
+// Configuration structure
 struct Config {
     std::string input = "/dev/stdin";
     std::string output = "/dev/stdout";
-    size_t block_size = 4 * 1024 * 1024; // Default: 4MB
-    size_t count = 0;
+    size_t block_size = 4 * 1024 * 1024;  // Default 4MB
+    size_t count = 0;  // 0 means read until EOF
     bool progress = false;
 };
 
+// Status Indicator (for progress display)
 class StatusIndicator {
     std::atomic<bool> running{false};
     std::thread status_thread;
@@ -54,7 +57,7 @@ class StatusIndicator {
             double elapsed = duration<double>(now - last_time).count();
             double total_elapsed = duration<double>(now - start_time).count();
             size_t bytes_diff = current_bytes - last_bytes;
-            double speed = (bytes_diff) / (elapsed * 1024 * 1024); // MB/s
+            double speed = bytes_diff / (elapsed * 1024 * 1024); // MB/s
 
             std::cerr << "\r" << Colors::CYAN << "[STATUS] " << Colors::RESET
                       << Colors::GREEN << "Transferred: " << current_bytes / (1024 * 1024) << " MB " << Colors::RESET
@@ -92,6 +95,7 @@ public:
     }
 };
 
+// Parse size (supports K, M, G suffixes)
 size_t parse_size(const std::string& s) {
     size_t num = 0, i = 0;
     bool digits = false;
@@ -114,6 +118,7 @@ size_t parse_size(const std::string& s) {
     }
 }
 
+// Parse command-line arguments
 Config parse_args(int argc, char** argv) {
     Config cfg;
 
@@ -148,6 +153,7 @@ Config parse_args(int argc, char** argv) {
     return cfg;
 }
 
+// Transfer data (core function)
 void transfer_data(const Config& cfg) {
     int in_fd = open(cfg.input.c_str(), O_RDONLY);
     int out_fd = open(cfg.output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -160,27 +166,29 @@ void transfer_data(const Config& cfg) {
     if (cfg.progress) status.start();
 
     size_t total_bytes = 0;
+    size_t blocks_written = 0;
 
-    while (cfg.count == 0 || total_bytes < cfg.count * cfg.block_size) {
+    while (cfg.count == 0 || blocks_written < cfg.count) {
         ssize_t bytes_read = read(in_fd, buffer.data(), cfg.block_size);
-        if (bytes_read <= 0) break; // End of file
+        if (bytes_read <= 0) break; // EOF or error
 
-        size_t bytes_written = 0;
-        while (bytes_written < static_cast<size_t>(bytes_read)) {
-            ssize_t written = write(out_fd, buffer.data() + bytes_written, bytes_read - bytes_written);
-            if (written <= 0) throw std::runtime_error("Write error");
+        ssize_t bytes_written = 0;
+        while (bytes_written < bytes_read) {
+            ssize_t result = write(out_fd, buffer.data() + bytes_written, bytes_read - bytes_written);
+            if (result <= 0) throw std::runtime_error("Write error");
 
-            bytes_written += written;
+            bytes_written += result;
         }
 
         total_bytes += bytes_read;
+        blocks_written++;
         if (cfg.progress) status.add_bytes(bytes_read);
     }
 
     if (cfg.progress) status.stop();
 
-    std::cerr << Colors::GREEN << (total_bytes / cfg.block_size) << " records in\n"
-              << Colors::BLUE << (total_bytes / cfg.block_size) << " records out\n"
+    std::cerr << Colors::GREEN << blocks_written << " records in\n"
+              << Colors::BLUE << blocks_written << " records out\n"
               << Colors::YELLOW << total_bytes << " bytes transferred\n"
               << Colors::RESET;
 
@@ -188,8 +196,9 @@ void transfer_data(const Config& cfg) {
     close(out_fd);
 }
 
+// Main function
 int main(int argc, char** argv) {
-    std::cout << "Cryonix Data-Definition v1.2 (Fixed & Optimized)\n";
+    std::cout << "Cryonix Data-Definition v2.0 (Optimized)\n";
 
     try {
         Config cfg = parse_args(argc, argv);

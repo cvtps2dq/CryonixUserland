@@ -91,7 +91,7 @@ std::vector<std::string> get_user_groups(const std::string& username) {
     return groups;
 }
 
-int main(const int argc) {
+int main(const int argc, char** argv) {
     bool incredible_flag = false;
 
     // Parse command-line options

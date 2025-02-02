@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstring>
 #include <iomanip>
+#include <errno.h>
 
 using namespace std;
 using namespace chrono;
@@ -30,13 +31,13 @@ void display_progress(size_t bytes_copied, size_t total_size, double speed, dura
 void copy_file(const char* input, const char* output, size_t block_size) {
     int src = open(input, O_RDONLY);
     if (src < 0) {
-        cerr << "Error opening input file." << endl;
+        cerr << "Error opening input file: " << strerror(errno) << endl;
         return;
     }
 
-    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC | O_SYNC, 0666);
     if (dest < 0) {
-        cerr << "Error opening output file." << endl;
+        cerr << "Error opening output file: " << strerror(errno) << endl;
         close(src);
         return;
     }
@@ -51,9 +52,18 @@ void copy_file(const char* input, const char* output, size_t block_size) {
     auto start_time = steady_clock::now();
     ssize_t bytes_read;
     while ((bytes_read = read(src, buffer, block_size)) > 0) {
-        write(dest, buffer, bytes_read);
-        bytes_copied += bytes_read;
+        ssize_t bytes_written = write(dest, buffer, bytes_read);
+        if (bytes_written < 0) {
+            cerr << "Error writing to file: " << strerror(errno) << endl;
+            break;
+        }
+        bytes_copied += bytes_written;
         blocks_copied++;
+
+        // Periodic flush every 64MB to avoid delaying close()
+        if (blocks_copied % (64 * 1024 * 1024 / block_size) == 0) {
+            fdatasync(dest);
+        }
 
         auto now = steady_clock::now();
         duration<double> elapsed = now - start_time;
@@ -69,6 +79,11 @@ void copy_file(const char* input, const char* output, size_t block_size) {
 }
 
 int main(int argc, char* argv[]) {
+    if (argc != 5) {
+        cerr << "Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;
+        return 1;
+    }
+
     const char* input = nullptr;
     const char* output = nullptr;
     size_t block_size = 0;

@@ -2,11 +2,13 @@
 // Created by cv2 on 02.02.2025.
 //
 
+#define _GNU_SOURCE  // Must come before any includes
 #include <iostream>
 #include <filesystem>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/statfs.h>  // Try this first
+#include <sys/statvfs.h>  // Correct header
+#include <linux/fs.h>     // For BLKBSZGET
 #include <fcntl.h>
 #include <unistd.h>
 

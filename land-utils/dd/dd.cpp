@@ -62,16 +62,17 @@ void copy_file(const char* input, const char* output, size_t block_size) {
     }
 
     delete[] buffer;
-    close(src);
+    fdatasync(dest);  // Ensure all data is flushed before closing
     close(dest);
+    close(src);
     cout << "\nCopy complete! " << bytes_copied << " bytes copied in " << blocks_copied << " blocks." << endl;
 }
 
 int main(int argc, char* argv[]) {
-    // if (argc != 5) {
-    //     cerr << "Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;
-    //     return 1;
-    // }
+    if (argc != 5) {
+        cerr << "Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;
+        return 1;
+    }
 
     const char* input = nullptr;
     const char* output = nullptr;

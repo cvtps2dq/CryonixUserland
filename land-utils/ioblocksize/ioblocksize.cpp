@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <linux/fs.h>
+#include <sys/statfs.h>  // Try this first
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -37,8 +37,8 @@ void get_block_size(const fs::path& path) {
     }
 
     // Get file system block size
-    struct statfs fs_stat;
-    if (statfs(path.c_str(), &fs_stat) == -1) {
+    struct statvfs fs_stat;
+    if (statvfs(path.c_str(), &fs_stat) == -1) {
         std::cerr << "\033[1;31mError: Unable to get filesystem info for " << path << "\033[0m\n";
         return;
     }

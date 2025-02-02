@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <atomic>
 #include <thread>
+#include <cstring>
 
 // ANSI color codes
 namespace Colors {
@@ -33,7 +34,7 @@ struct Config {
 class StatusIndicator {
     std::atomic<bool> running{false};
     std::thread status_thread;
-    std::atomic<size_t> blocks_processed{0};
+    std::atomic<size_t> bytes_processed{0};
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     size_t block_size;
 
@@ -41,27 +42,27 @@ class StatusIndicator {
         using namespace std::chrono;
         constexpr auto update_interval = 500ms;
 
-        size_t last_block_count = blocks_processed.load();
+        size_t last_bytes = bytes_processed.load();
         auto last_time = steady_clock::now();
 
         while (running) {
             std::this_thread::sleep_for(update_interval);
 
             auto now = steady_clock::now();
-            size_t current_blocks = blocks_processed.load();
+            size_t current_bytes = bytes_processed.load();
 
             double elapsed = duration<double>(now - last_time).count();
             double total_elapsed = duration<double>(now - start_time).count();
-            size_t blocks_diff = current_blocks - last_block_count;
-            double speed = (blocks_diff * block_size) / (elapsed * 1024 * 1024); // MB/s
+            size_t bytes_diff = current_bytes - last_bytes;
+            double speed = (bytes_diff) / (elapsed * 1024 * 1024); // MB/s
 
             std::cerr << "\r" << Colors::CYAN << "[STATUS] " << Colors::RESET
-                      << Colors::GREEN << "Blocks: " << current_blocks << " " << Colors::RESET
+                      << Colors::GREEN << "Transferred: " << current_bytes / (1024 * 1024) << " MB " << Colors::RESET
                       << Colors::YELLOW << "Speed: " << std::fixed << std::setprecision(2)
                       << speed << " MB/s" << Colors::RESET
-                      << Colors::BLUE << " Total Elapsed: " << total_elapsed << "s " << Colors::RESET;
+                      << Colors::BLUE << " Elapsed: " << total_elapsed << "s " << Colors::RESET;
 
-            last_block_count = current_blocks;
+            last_bytes = current_bytes;
             last_time = now;
         }
     }
@@ -75,8 +76,8 @@ public:
         status_thread = std::thread(&StatusIndicator::display_loop, this);
     }
 
-    void increment() {
-        blocks_processed++;
+    void add_bytes(size_t bytes) {
+        bytes_processed += bytes;
     }
 
     void stop() {
@@ -148,34 +149,39 @@ Config parse_args(int argc, char** argv) {
 }
 
 void transfer_data(const Config& cfg) {
-    int in_fd = (cfg.input == "/dev/stdin") ? STDIN_FILENO : open(cfg.input.c_str(), O_RDONLY);
-    int out_fd = (cfg.output == "/dev/stdout") ? STDOUT_FILENO : open(cfg.output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int in_fd = open(cfg.input.c_str(), O_RDONLY);
+    int out_fd = open(cfg.output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
-    if (in_fd < 0) throw std::runtime_error("Failed to open input file");
-    if (out_fd < 0) throw std::runtime_error("Failed to open output file");
+    if (in_fd < 0) throw std::runtime_error("Failed to open input file: " + cfg.input);
+    if (out_fd < 0) throw std::runtime_error("Failed to open output file: " + cfg.output);
 
     std::vector<char> buffer(cfg.block_size);
     StatusIndicator status(cfg.block_size);
     if (cfg.progress) status.start();
 
-    size_t total_blocks = 0;
+    size_t total_bytes = 0;
 
-    while (cfg.count == 0 || total_blocks < cfg.count) {
+    while (cfg.count == 0 || total_bytes < cfg.count * cfg.block_size) {
         ssize_t bytes_read = read(in_fd, buffer.data(), cfg.block_size);
-        if (bytes_read <= 0) break;
+        if (bytes_read <= 0) break; // End of file
 
-        ssize_t bytes_written = write(out_fd, buffer.data(), bytes_read);
-        if (bytes_written != bytes_read) throw std::runtime_error("Write error");
+        size_t bytes_written = 0;
+        while (bytes_written < static_cast<size_t>(bytes_read)) {
+            ssize_t written = write(out_fd, buffer.data() + bytes_written, bytes_read - bytes_written);
+            if (written <= 0) throw std::runtime_error("Write error");
 
-        total_blocks++;
-        if (cfg.progress) status.increment();
+            bytes_written += written;
+        }
+
+        total_bytes += bytes_read;
+        if (cfg.progress) status.add_bytes(bytes_read);
     }
 
     if (cfg.progress) status.stop();
 
-    std::cerr << Colors::GREEN << total_blocks << " records in\n"
-              << Colors::BLUE << total_blocks << " records out\n"
-              << Colors::YELLOW << total_blocks * cfg.block_size << " bytes transferred\n"
+    std::cerr << Colors::GREEN << (total_bytes / cfg.block_size) << " records in\n"
+              << Colors::BLUE << (total_bytes / cfg.block_size) << " records out\n"
+              << Colors::YELLOW << total_bytes << " bytes transferred\n"
               << Colors::RESET;
 
     close(in_fd);
@@ -183,7 +189,7 @@ void transfer_data(const Config& cfg) {
 }
 
 int main(int argc, char** argv) {
-    std::cout << "Cryonix Data-Definition v1.1 (Optimized)\n";
+    std::cout << "Cryonix Data-Definition v1.2 (Fixed & Optimized)\n";
 
     try {
         Config cfg = parse_args(argc, argv);

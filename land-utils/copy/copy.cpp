@@ -50,7 +50,7 @@ void copy_directory(const fs::path& source_dir, const fs::path& dest_dir) {
             copy_directory(source_path, dest_path);
         } else if (fs::is_regular_file(source_path)) {
             // Copy regular files
-            copy_file(source_path, dest_path);
+            fs::copy_file(source_path, dest_path);
         }
     }
 }
@@ -66,7 +66,7 @@ void cp_clone(const fs::path& source, const fs::path& dest, bool recursive) {
         }
     } else if (fs::is_regular_file(source)) {
         // Copy a single file
-        copy_file(source, dest);
+        fs::copy_file(source, dest);
     } else {
         std::cerr << "Error: Source is neither a file nor a directory.\n";
         exit(1);

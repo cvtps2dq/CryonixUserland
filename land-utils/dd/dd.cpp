@@ -79,10 +79,6 @@ void copy_file(const char* input, const char* output, size_t block_size) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 5) {
-        cerr << "Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;
-        return 1;
-    }
 
     const char* input = nullptr;
     const char* output = nullptr;

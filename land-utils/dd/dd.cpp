@@ -171,7 +171,7 @@ Config parse_args(const int argc, char** argv) {
 
         try {
             if (arg.find("from=") == 0) {
-                cfg.input = arg.substr(3);
+                cfg.input = arg.substr(5);
             } else if (arg.find("to=") == 0) {
                 cfg.output = arg.substr(3);
             } else if (arg.find("block_size=") == 0) {

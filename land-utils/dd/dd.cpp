@@ -1,8 +1,8 @@
 #include <iostream>
-#include <fstream>
+#include <fcntl.h>
+#include <unistd.h>
 #include <chrono>
 #include <cstring>
-#include <unistd.h>
 #include <iomanip>
 
 using namespace std;
@@ -28,26 +28,30 @@ void display_progress(size_t bytes_copied, size_t total_size, double speed, dura
 }
 
 void copy_file(const char* input, const char* output, size_t block_size) {
-    ifstream src(input, ios::binary);
-    ofstream dest(output, ios::binary);
-
-    if (!src || !dest) {
-        cerr << "Error opening files." << endl;
+    int src = open(input, O_RDONLY);
+    if (src < 0) {
+        cerr << "Error opening input file." << endl;
         return;
     }
 
-    src.seekg(0, ios::end);
-    size_t total_size = src.tellg();
-    src.seekg(0, ios::beg);
+    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (dest < 0) {
+        cerr << "Error opening output file." << endl;
+        close(src);
+        return;
+    }
+
+    off_t total_size = lseek(src, 0, SEEK_END);
+    lseek(src, 0, SEEK_SET);
 
     char* buffer = new char[block_size];
     size_t bytes_copied = 0;
     size_t blocks_copied = 0;
 
     auto start_time = steady_clock::now();
-    while (src.read(buffer, block_size) || src.gcount() > 0) {
-        size_t bytes_read = src.gcount();
-        dest.write(buffer, bytes_read);
+    ssize_t bytes_read;
+    while ((bytes_read = read(src, buffer, block_size)) > 0) {
+        write(dest, buffer, bytes_read);
         bytes_copied += bytes_read;
         blocks_copied++;
 
@@ -58,6 +62,8 @@ void copy_file(const char* input, const char* output, size_t block_size) {
     }
 
     delete[] buffer;
+    close(src);
+    close(dest);
     cout << "\nCopy complete! " << bytes_copied << " bytes copied in " << blocks_copied << " blocks." << endl;
 }
 
@@ -80,9 +86,6 @@ int main(int argc, char* argv[]) {
             block_size = stoul(argv[i] + 3);
         }
     }
-    cout << "Input file: " << input << endl;
-    cout << "Output file: " << output << endl;
-    cout << "Block size: " << block_size << endl;
 
     if (!input || !output || block_size == 0) {
         cerr << "Invalid arguments. Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;

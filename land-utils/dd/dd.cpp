@@ -93,6 +93,7 @@ void transfer_data(const Config& cfg) {
         ssize_t bytes_written = 0;
         while (bytes_written < bytes_read) {
             const ssize_t result = write(out_fd, buffer.data() + bytes_written, bytes_read - bytes_written);
+            std::cout << Colors::CYAN << "Writing byte " << bytes_written << "\n";
             if (result < 0) {
                 std::cerr << Colors::RED << "[ERROR] Write failed!\n" << Colors::RESET;
                 break;

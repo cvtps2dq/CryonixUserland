@@ -22,7 +22,7 @@ namespace Colors {
 struct Config {
     std::string input = "/dev/stdin";
     std::string output = "/dev/stdout";
-    size_t block_size = 4 * 1024 * 1024; // Default 4MB
+    size_t block_size = 4096; // Default 4KB
     size_t count = 0; // 0 means read until EOF
     bool progress = false;
 };
@@ -61,37 +61,48 @@ Config parse_args(int argc, char** argv) {
 // Transfer data with debug info
 void transfer_data(const Config& cfg) {
     int in_fd = open(cfg.input.c_str(), O_RDONLY);
-    if (in_fd < 0) throw std::runtime_error("Failed to open input: " + cfg.input);
+    if (in_fd < 0) {
+        std::cerr << Colors::RED << "Failed to open input: " << cfg.input << "\n" << Colors::RESET;
+        return;
+    }
 
     int out_fd = open(cfg.output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (out_fd < 0) throw std::runtime_error("Failed to open output: " + cfg.output);
+    if (out_fd < 0) {
+        std::cerr << Colors::RED << "Failed to open output: " << cfg.output << "\n" << Colors::RESET;
+        close(in_fd);
+        return;
+    }
 
     std::vector<char> buffer(cfg.block_size);
     size_t total_bytes = 0, blocks_written = 0;
 
     auto start_time = std::chrono::steady_clock::now();
+
     while (cfg.count == 0 || blocks_written < cfg.count) {
         ssize_t bytes_read = read(in_fd, buffer.data(), cfg.block_size);
 
         if (bytes_read < 0) {
-            std::cerr << Colors::RED << "Read error\n" << Colors::RESET;
+            std::cerr << Colors::RED << "[ERROR] Read failed!\n" << Colors::RESET;
             break;
         }
-        if (bytes_read == 0) break; // EOF
+        if (bytes_read == 0) {
+            std::cerr << Colors::CYAN << "[DEBUG] EOF reached after " << blocks_written << " blocks.\n" << Colors::RESET;
+            break;
+        }
 
-        std::cerr << Colors::CYAN << "Read " << bytes_read << " bytes\n" << Colors::RESET;
+        std::cerr << Colors::CYAN << "[DEBUG] Read " << bytes_read << " bytes\n" << Colors::RESET;
 
         ssize_t bytes_written = 0;
         while (bytes_written < bytes_read) {
             ssize_t result = write(out_fd, buffer.data() + bytes_written, bytes_read - bytes_written);
             if (result < 0) {
-                std::cerr << Colors::RED << "Write error\n" << Colors::RESET;
+                std::cerr << Colors::RED << "[ERROR] Write failed!\n" << Colors::RESET;
                 break;
             }
             bytes_written += result;
         }
 
-        std::cerr << Colors::GREEN << "Wrote " << bytes_written << " bytes\n" << Colors::RESET;
+        std::cerr << Colors::GREEN << "[DEBUG] Wrote " << bytes_written << " bytes\n" << Colors::RESET;
 
         total_bytes += bytes_written;
         blocks_written++;
@@ -101,7 +112,7 @@ void transfer_data(const Config& cfg) {
     double elapsed = std::chrono::duration<double>(end_time - start_time).count();
     double speed = total_bytes / (elapsed * 1024 * 1024);
 
-    std::cerr << Colors::YELLOW << "Total: " << total_bytes << " bytes, Speed: " << speed << " MB/s\n" << Colors::RESET;
+    std::cerr << Colors::YELLOW << "[SUMMARY] Total: " << total_bytes << " bytes, Speed: " << speed << " MB/s\n" << Colors::RESET;
 
     close(in_fd);
     close(out_fd);

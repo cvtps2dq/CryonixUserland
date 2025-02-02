@@ -8,6 +8,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <thread>
+#include <vector>
 
 using namespace std;
 using namespace chrono;
@@ -31,6 +33,10 @@ void display_progress(size_t bytes_copied, size_t total_size, double speed, dura
     cout.flush();
 }
 
+void copy_chunk(int dest, void* src_map, off_t offset, size_t chunk_size) {
+    pwrite(dest, (char*)src_map + offset, chunk_size, offset);
+}
+
 void copy_file(const char* input, const char* output, size_t block_size) {
     int src = open(input, O_RDONLY);
     if (src < 0) {
@@ -38,7 +44,7 @@ void copy_file(const char* input, const char* output, size_t block_size) {
         return;
     }
 
-    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int dest = open(output, O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT, 0666);
     if (dest < 0) {
         cerr << "Error opening output file: " << strerror(errno) << endl;
         close(src);
@@ -67,14 +73,11 @@ void copy_file(const char* input, const char* output, size_t block_size) {
     size_t bytes_copied = 0;
     auto start_time = steady_clock::now();
 
+    vector<thread> threads;
     for (size_t i = 0; i < total_size; i += block_size) {
         size_t chunk_size = min(block_size, total_size - i);
-        ssize_t bytes_written = write(dest, (char*)src_map + i, chunk_size);
-        if (bytes_written < 0) {
-            cerr << "Error writing to file: " << strerror(errno) << endl;
-            break;
-        }
-        bytes_copied += bytes_written;
+        threads.emplace_back(copy_chunk, dest, src_map, i, chunk_size);
+        bytes_copied += chunk_size;
 
         auto now = steady_clock::now();
         duration<double> elapsed = now - start_time;
@@ -82,14 +85,18 @@ void copy_file(const char* input, const char* output, size_t block_size) {
         display_progress(bytes_copied, total_size, speed, elapsed);
     }
 
+    for (auto& t : threads) {
+        t.join();
+    }
+
     munmap(src_map, total_size);
-    fsync(dest);  // Ensure all data is flushed before closing
     close(dest);
     close(src);
     cout << "\nCopy complete! " << bytes_copied << " bytes copied." << endl;
 }
 
 int main(int argc, char* argv[]) {
+
     const char* input = nullptr;
     const char* output = nullptr;
     size_t block_size = 0;

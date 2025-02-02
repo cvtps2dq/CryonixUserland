@@ -44,7 +44,7 @@ void print_group_info(const group* grp) {
 // Function to display basic group names
 void display_groups(const std::vector<std::string>& groups, const bool incredible_flag) {
     if (incredible_flag) {
-        std::cout << "\033[1;34m========================= Incredible Group Info ==========================\033[0m\n";
+        std::cout << "\033[1;34m========================= Group Info ==========================\033[0m\n";
     } else {
         std::cout << "\033[1;34m============================= Groups ==============================\033[0m\n";
     }
@@ -76,9 +76,9 @@ std::vector<std::string> get_user_groups(const std::string& username) {
 
     // Get the list of groups for the user
     int ngroups = 0;
-    getgrouplist(username.c_str(), static_cast<int>(pwd->pw_gid), nullptr, &ngroups);
+    getgrouplist(username.c_str(), pwd->pw_gid, nullptr, &ngroups);
     std::vector<int> group_ids(ngroups);
-    getgrouplist(username.c_str(), static_cast<int>(pwd->pw_gid), group_ids.data(), &ngroups);
+    getgrouplist(username.c_str(), pwd->pw_gid, group_ids.data(), &ngroups);
 
     // Retrieve group names based on group IDs
     for (const int gid : group_ids) {

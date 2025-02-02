@@ -12,6 +12,8 @@
 #include <iomanip>
 #include <thread>
 #include <atomic>
+#include <unistd.h>
+#include <fcntl.h>
 
 // ANSI color codes
 namespace Colors {
@@ -44,17 +46,15 @@ public:
     explicit FileWrapper(const Config& cfg) {
         if (cfg.input != "stdin") {
             infile.open(cfg.input, std::ios::binary);
-            std::cout << Colors::BLUE
-            << "opening input file: " << cfg.input << Colors::RESET << std::endl;
-            if (!infile) throw std::runtime_error("input file error");
+            std::cout << Colors::BLUE << "Opening input file: " << cfg.input << Colors::RESET << std::endl;
+            if (!infile) throw std::runtime_error("Error opening input file");
             in = &infile;
         }
 
         if (cfg.output != "stdout") {
             outfile.open(cfg.output, std::ios::binary | std::ios::trunc);
-            std::cout << Colors::BLUE
-            << "opening output file: " << cfg.output << Colors::RESET << std::endl;
-            if (!outfile) throw std::runtime_error("output file error");
+            std::cout << Colors::BLUE << "Opening output file: " << cfg.output << Colors::RESET << std::endl;
+            if (!outfile) throw std::runtime_error("Error opening output file");
             out = &outfile;
         }
     }
@@ -68,32 +68,33 @@ class StatusIndicator {
     std::thread status_thread;
     std::atomic<size_t> blocks_processed{0};
     std::chrono::time_point<std::chrono::steady_clock> start_time;
+    size_t block_size;
 
     void display_loop() const {
         using namespace std::chrono;
         constexpr auto update_interval = 500ms;
 
-        auto last_block_count = blocks_processed.load();
+        size_t last_block_count = blocks_processed.load();
         auto last_time = steady_clock::now();
 
         while (running) {
             std::this_thread::sleep_for(update_interval);
 
             auto now = steady_clock::now();
-            const auto current_blocks = blocks_processed.load();
+            size_t current_blocks = blocks_processed.load();
 
-            const double elapsed = duration<double>(now - last_time).count();
-            const double total_elapsed = duration<double>(now - start_time).count();
+            double elapsed = duration<double>(now - last_time).count();
+            double total_elapsed = duration<double>(now - start_time).count();
 
-            const size_t blocks_diff = current_blocks - last_block_count;
-            const double speed = static_cast<double>(blocks_diff * block_size) / (elapsed * 1024 * 1024); // MB/s
+            size_t blocks_diff = current_blocks - last_block_count;
+            double speed = (blocks_diff * block_size) / (elapsed * 1024 * 1024); // MB/s
 
             std::cerr << "\r" << Colors::CYAN << "[STATUS] " << Colors::RESET
-                      << Colors::GREEN << "blocks: " << current_blocks << " " << Colors::RESET
-                      << Colors::YELLOW << "speed: " << std::fixed << std::setprecision(2)
+                      << Colors::GREEN << "Blocks: " << current_blocks << " " << Colors::RESET
+                      << Colors::YELLOW << "Speed: " << std::fixed << std::setprecision(2)
                       << speed << " MB/s" << Colors::RESET
-                      << Colors::MAGENTA << "total elapsed: " << total_elapsed << Colors::RESET
-                      << std::string(10, ' '); // Clear any leftover characters
+                      << Colors::MAGENTA << " Total Elapsed: " << total_elapsed << "s " << Colors::RESET
+                      << std::string(10, ' '); // Clear extra characters
 
             last_block_count = current_blocks;
             last_time = now;
@@ -101,9 +102,7 @@ class StatusIndicator {
     }
 
 public:
-    size_t block_size;
-
-    explicit StatusIndicator(const size_t bs) : block_size(bs) {}
+    explicit StatusIndicator(size_t bs) : block_size(bs) {}
 
     void start() {
         start_time = std::chrono::steady_clock::now();
@@ -111,7 +110,7 @@ public:
         status_thread = std::thread(&StatusIndicator::display_loop, this);
     }
 
-    void increment(const size_t count = 1) {
+    void increment(size_t count = 1) {
         blocks_processed += count;
     }
 
@@ -121,8 +120,8 @@ public:
             status_thread.join();
         }
 
-        const auto end_time = std::chrono::steady_clock::now();
-        const double total_seconds = std::chrono::duration<double>(end_time - start_time).count();
+        auto end_time = std::chrono::steady_clock::now();
+        double total_seconds = std::chrono::duration<double>(end_time - start_time).count();
 
         std::cerr << "\n" << Colors::GREEN << "[COMPLETE] " << Colors::RESET
                   << "Total time: " << std::fixed << std::setprecision(2) << total_seconds << "s\n";
@@ -130,29 +129,17 @@ public:
 };
 
 size_t parse_size(const std::string& s) {
-    size_t num = 0;
-    size_t i = 0;
+    size_t num = 0, i = 0;
     bool digits = false;
 
-    // parse numeric part
     for (; i < s.size() && std::isdigit(static_cast<unsigned char>(s[i])); ++i) {
         num = num * 10 + (s[i] - '0');
         digits = true;
     }
 
-    if (!digits) throw std::invalid_argument("no digits found");
+    if (!digits) throw std::invalid_argument("Invalid size format");
 
-    // parse suffix with proper character handling
-    char suffix = '\0';
-    if (i < s.size()) {
-        suffix = static_cast<char>(std::toupper(static_cast<unsigned char>(s[i++])));
-        if (i < s.size() && suffix == 'B') { // Handle 'B' suffix (MB, GB)
-            suffix = static_cast<char>(std::toupper(static_cast<unsigned char>(s[i])));
-            i++;
-        }
-    }
-
-    if (i != s.size()) throw std::invalid_argument("invalid characters");
+    char suffix = (i < s.size()) ? std::toupper(static_cast<unsigned char>(s[i])) : '\0';
 
     switch(suffix) {
         case 'K': return num * 1024;
@@ -163,7 +150,7 @@ size_t parse_size(const std::string& s) {
     }
 }
 
-Config parse_args(const int argc, char** argv) {
+Config parse_args(int argc, char** argv) {
     Config cfg;
 
     for (int i = 1; i < argc; ++i) {
@@ -175,7 +162,7 @@ Config parse_args(const int argc, char** argv) {
             } else if (arg.find("to=") == 0) {
                 cfg.output = arg.substr(3);
             } else if (arg.find("block_size=") == 0) {
-                cfg.block_size = parse_size(arg.substr(3));
+                cfg.block_size = parse_size(arg.substr(11));
             } else if (arg.find("count=") == 0) {
                 cfg.count = std::stoull(arg.substr(6));
             } else if (arg == "status=progress") {
@@ -197,56 +184,51 @@ Config parse_args(const int argc, char** argv) {
     return cfg;
 }
 
-void transfer_data(const FileWrapper& files, const Config& cfg) {
-    std::vector<char> buffer(cfg.block_size);
-
-    StatusIndicator status(cfg.block_size);
-    if (cfg.progress) {
-        status.start();
-    }
-
-    try {
-        size_t total_blocks = 0;
-        while (true) {
-            if (cfg.count != 0 && total_blocks >= cfg.count) break;
-
-            files.input().read(buffer.data(), static_cast<long>(cfg.block_size));
-
-            if (const auto bytes_read = files.input().gcount(); bytes_read > 0) {
-                files.output().write(buffer.data(), bytes_read);
-                if (!files.output().good()) {
-                    throw std::runtime_error("Write error");
-                }
-                total_blocks++;
-                if (cfg.progress) {
-                    status.increment();
-                }
-            }
-
-            if (files.input().eof()) break;
-            if (!files.input().good()) {
-                throw std::runtime_error("Read error");
-            }
+void fsync_if_needed(const std::string& path) {
+    if (path != "stdout") {
+        int fd = open(path.c_str(), O_WRONLY);
+        if (fd >= 0) {
+            fsync(fd);
+            close(fd);
         }
-
-        if (cfg.progress) {
-            status.stop();
-        }
-
-        std::cerr << Colors::GREEN << total_blocks << "+0 records in\n" << Colors::RESET
-                  << Colors::BLUE << total_blocks << "+0 records out\n" << Colors::RESET
-                  << Colors::YELLOW << total_blocks * cfg.block_size
-                  << " bytes transferred\n" << Colors::RESET;
-    } catch (...) {
-        if (cfg.progress) {
-            status.stop();
-        }
-        throw;
     }
 }
 
+void transfer_data(const FileWrapper& files, const Config& cfg) {
+    std::vector<char> buffer(cfg.block_size);
+    StatusIndicator status(cfg.block_size);
+
+    if (cfg.progress) status.start();
+
+    size_t total_blocks = 0;
+
+    while (cfg.count == 0 || total_blocks < cfg.count) {
+        files.input().read(buffer.data(), static_cast<std::streamsize>(cfg.block_size));
+        std::streamsize bytes_read = files.input().gcount();
+
+        if (bytes_read > 0) {
+            files.output().write(buffer.data(), bytes_read);
+            files.output().flush();
+            fsync_if_needed(cfg.output);
+            total_blocks++;
+            if (cfg.progress) status.increment();
+        }
+
+        if (files.input().eof()) break;
+        if (!files.input().good()) throw std::runtime_error("Read error");
+    }
+
+    if (cfg.progress) status.stop();
+
+    std::cerr << Colors::GREEN << total_blocks << " records in\n"
+              << Colors::BLUE << total_blocks << " records out\n"
+              << Colors::YELLOW << total_blocks * cfg.block_size << " bytes transferred\n"
+              << Colors::RESET;
+}
+
 int main(int argc, char** argv) {
-    std::cout << "cryonix data-definition v1.0" << std::endl;
+    std::cout << "Cryonix Data-Definition v1.0" << std::endl;
+
     try {
         Config cfg = parse_args(argc, argv);
         FileWrapper files(cfg);

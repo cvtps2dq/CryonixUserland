@@ -114,8 +114,11 @@ void transfer_data(const Config& cfg) {
 
     std::cerr << Colors::YELLOW << "[SUMMARY] Total: " << total_bytes << " bytes, Speed: " << speed << " MB/s\n" << Colors::RESET;
 
+    std::cout << Colors::GREEN << "[JOB] Closing input file..." << Colors::RESET << std::endl;
     close(in_fd);
+    std::cout << Colors::GREEN << "[JOB] Closing output file..." << Colors::RESET << std::endl;
     close(out_fd);
+    std::cout << Colors::GREEN << "[JOB] Done." << Colors::RESET << std::endl;
 }
 
 int main(int argc, char** argv) {

@@ -80,6 +80,9 @@ int main(int argc, char* argv[]) {
             block_size = stoul(argv[i] + 3);
         }
     }
+    cout << "Input file: " << input << endl;
+    cout << "Output file: " << output << endl;
+    cout << "Block size: " << block_size << endl;
 
     if (!input || !output || block_size == 0) {
         cerr << "Invalid arguments. Usage: " << argv[0] << " from=<input> to=<output> bs=<block_size>" << endl;

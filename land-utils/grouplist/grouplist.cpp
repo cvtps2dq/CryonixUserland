@@ -61,7 +61,9 @@ void display_groups(const std::vector<std::string>& groups, const bool incredibl
         }
     }
 
-    std::cout << "\033[1;34m=====================================================================\033[0m\n";
+    if (incredible_flag) {
+        std::cout << "\033[1;34m=====================================================================\033[0m\n";
+    }
 }
 
 // Function to get the groups of the current user

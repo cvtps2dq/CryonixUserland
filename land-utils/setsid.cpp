@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <cstdlib>
 #include <cstring>
+#include <sys/wait.h>
 
 void print_usage(const char* prog_name) {
     std::cerr << "Usage: " << prog_name << " [options] <program> [arguments ...]" << std::endl;

@@ -3,6 +3,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <vector>
+#include <sys/types.h>
 
 void print_usage() {
     std::cout << "Usage: cryonix_whoami [-f] [--heisenberg]\n"
@@ -24,7 +25,7 @@ void saymyname(const bool show_full_info) {
             std::cout << "Full Name: " << pw->pw_gecos << std::endl;
 
             // Fetch the user's groups
-            std::vector<int> groups;
+            std::vector<gid_t> groups;
             int ngroups = 0;
             if (getgrouplist(pw->pw_name, pw->pw_gid, nullptr, &ngroups) == -1) {
                 groups.resize(ngroups);

@@ -1,37 +1,36 @@
-# Makefile for building all Cryonix utilities
+# Makefile for building each Cryonix utility separately
 
-CC = clang++
-CFLAGS = -std=c++23 -Wall -Wextra -O2
+CC = cmake++
+CFLAGS = -std=c++23 -Wall -Wextra -O2 -lz
 BUILD_DIR = build
 SRC_DIR = land-utils
 BIN_DIR = bin
-EXEC_NAME = cryonix_userland
 
-# List all your source files here
+# Find all .cpp files in the src directory and remove the path and extension to get the program names
+PROGRAMS = $(basename $(wildcard $(SRC_DIR)/*/*.cpp))
+
+# List of source files
 SOURCES = $(wildcard $(SRC_DIR)/*/*.cpp)
 
 # Automatically create object files
 OBJECTS = $(SOURCES:$(SRC_DIR)/%/%.cpp=$(BUILD_DIR)/%.o)
 
-# Final executable name
-TARGET = $(BIN_DIR)/$(EXEC_NAME)
-
-# Default target
-all: $(TARGET)
+# Default target is to build all programs
+all: $(PROGRAMS)
 
 # Create the binary directory if it doesn't exist
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-# Link the object files to create the final executable
-$(TARGET): $(OBJECTS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+# Rule to build each program
+$(BIN_DIR)/%: $(SRC_DIR)/%.cpp | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $<
 
 # Compile each source file into object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean the build directory
+# Clean the build and bin directories
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 

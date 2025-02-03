@@ -1,7 +1,7 @@
 //
 // Created by cv2 on 03.02.2025.
 //
-
+#define _GNU_SOURCE
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -14,12 +14,6 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <algorithm>
-#include <crypt.h>
-
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <unistd.h>
 #include <crypt.h>
 
 void show_help() {

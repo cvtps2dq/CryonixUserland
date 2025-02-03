@@ -62,6 +62,7 @@ bool change_permissions(const std::string& path, const std::string& mode) {
         const char* err_msg = strerror_r(errno, err_buf, sizeof(err_buf));
         std::cerr << "Error: Could not stat file " << path
                   << ": " << (err_msg ? err_msg : "Unknown error") << "\n";
+        }
 
     const mode_t original_mode = file_stat.st_mode;
     mode_t new_mode = original_mode;

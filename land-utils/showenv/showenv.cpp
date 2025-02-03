@@ -7,6 +7,7 @@
 #include <cstring>
 #include <unordered_map>
 #include <unistd.h>
+#include <vector>
 
 void print_usage() {
     std::cout << "Usage: showenv [VARIABLE...]\n"

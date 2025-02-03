@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <cstdlib>
+#include <vector>
 
 void print_usage() {
     std::cout << "Usage: cryonix_printf FORMAT [ARGUMENTS...]\n"

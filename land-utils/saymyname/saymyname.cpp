@@ -26,9 +26,9 @@ void saymyname(const bool show_full_info) {
             // Fetch the user's groups
             std::vector<int> groups;
             int ngroups = 0;
-            if (getgrouplist(pw->pw_name, static_cast<int>(pw->pw_gid), nullptr, &ngroups) == -1) {
+            if (getgrouplist(pw->pw_name, pw->pw_gid, nullptr, &ngroups) == -1) {
                 groups.resize(ngroups);
-                if (getgrouplist(pw->pw_name, static_cast<int>(pw->pw_gid), groups.data(), &ngroups) == -1) {
+                if (getgrouplist(pw->pw_name, pw->pw_gid, groups.data(), &ngroups) == -1) {
                     std::cerr << "Error: Unable to retrieve groups.\n";
                     return;
                 }

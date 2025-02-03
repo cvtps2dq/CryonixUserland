@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = clang++
 CXXFLAGS = -std=c++23 -Wall -Wextra -O2
-LDFLAGS = -lz
+LDFLAGS = -lz -lcrypt
 
 # Directories
 BUILD_DIR = build

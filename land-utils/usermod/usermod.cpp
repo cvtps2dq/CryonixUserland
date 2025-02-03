@@ -14,6 +14,13 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <algorithm>
+#include <crypt.h>
+
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <unistd.h>
+#include <crypt.h>
 
 void show_help() {
     std::cout << "Usage: cryonix_usermod [options] username\n"
@@ -146,10 +153,43 @@ bool update_group(const std::string& username, int new_gid) {
 }
 
 std::string hash_password(const std::string& password) {
-    const char* salt = "$6$random_salt$";  // Example salt (SHA-512)
+    // Generate a proper random salt (16 characters)
+    const std::string salt_prefix = "$6$";  // SHA-512
+    char salt[16 + salt_prefix.length() + 1];
+
+    // Generate random salt characters [a-zA-Z0-9./]
+    const char* salt_chars =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
+
+    // Read random bytes from /dev/urandom
+    FILE* urandom = fopen("/dev/urandom", "rb");
+    if (!urandom) {
+        throw std::runtime_error("Failed to open /dev/urandom");
+    }
+
+    unsigned char rand_bytes[16];
+    fread(rand_bytes, 1, 16, urandom);
+    fclose(urandom);
+
+    // Build salt string
+    strcpy(salt, salt_prefix.c_str());
+    for (int i = 0; i < 16; i++) {
+        salt[salt_prefix.length() + i] =
+            salt_chars[rand_bytes[i] % (strlen(salt_chars))];
+    }
+    salt[salt_prefix.length() + 16] = '\0';
+
+    // Setup crypt_data structure
     struct crypt_data data;
-    data.initialized = 0;
-    return crypt_r(password.c_str(), salt, &data);
+    memset(&data, 0, sizeof(data));  // Proper initialization
+
+    // Perform hashing
+    char* result = crypt_r(password.c_str(), salt, &data);
+    if (!result) {
+        throw std::runtime_error("Password hashing failed");
+    }
+
+    return std::string(result);
 }
 
 int main(int argc, char* argv[]) {

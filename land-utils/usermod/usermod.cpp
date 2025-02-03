@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 #include <cstring>
-#include <memset>
+#include <bitset>
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>

@@ -147,37 +147,43 @@ bool update_group(const std::string& username, int new_gid) {
 }
 
 std::string hash_password(const std::string& password) {
-    // Generate a proper random salt (16 characters)
     const std::string salt_prefix = "$6$";  // SHA-512
-    char salt[16 + salt_prefix.length() + 1];
+    constexpr size_t salt_size = 3 + 16 + 1;  // 3 (prefix) + 16 chars + null
+    char salt[salt_size] = {0};  // Zero-initialize buffer
 
-    // Generate random salt characters [a-zA-Z0-9./]
     const char* salt_chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
 
-    // Read random bytes from /dev/urandom
-    FILE* urandom = fopen("/dev/urandom", "rb");
-    if (!urandom) {
-        throw std::runtime_error("Failed to open /dev/urandom");
+    // Copy prefix with bounds checking
+    if (salt_prefix.size() >= salt_size) {
+        throw std::runtime_error("Salt prefix too long for buffer");
     }
 
+    // Safe copy using standard library with bounds checking
+    std::snprintf(salt, salt_size, "%s", salt_prefix.c_str());
+
+    // Generate random bytes
     unsigned char rand_bytes[16];
-    fread(rand_bytes, 1, 16, urandom);
+    FILE* urandom = fopen("/dev/urandom", "rb");
+    if (!urandom || fread(rand_bytes, 1, sizeof(rand_bytes), urandom) != sizeof(rand_bytes)) {
+        if (urandom) fclose(urandom);
+        throw std::runtime_error("Failed to generate random salt");
+    }
     fclose(urandom);
 
-    // Build salt string
-    strcpy(salt, salt_prefix.c_str());
-    for (int i = 0; i < 16; i++) {
-        salt[salt_prefix.length() + i] =
-            salt_chars[rand_bytes[i] % (strlen(salt_chars))];
+    // Fill salt with random characters
+    const size_t salt_chars_len = std::strlen(salt_chars);
+    for (size_t i = 0; i < 16; ++i) {
+        const size_t pos = salt_prefix.length() + i;
+        if (pos >= salt_size - 1) break;  // Prevent buffer overflow
+        salt[pos] = salt_chars[rand_bytes[i] % salt_chars_len];
     }
-    salt[salt_prefix.length() + 16] = '\0';
+    salt[salt_size - 1] = '\0';  // Ensure null termination
 
-    // Setup crypt_data structure
+    // crypt_r initialization
     struct crypt_data data;
-    memset(&data, 0, sizeof(data));  // Proper initialization
+    std::memset(&data, 0, sizeof(data));
 
-    // Perform hashing
     char* result = crypt_r(password.c_str(), salt, &data);
     if (!result) {
         throw std::runtime_error("Password hashing failed");

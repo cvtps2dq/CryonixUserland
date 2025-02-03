@@ -7,6 +7,8 @@
 #include <pwd.h>
 #include <grp.h>
 #include <cstdlib>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 //please build with linux because macOS doesn't have the AL_SYMLINK_FOLLOW parameter.
 

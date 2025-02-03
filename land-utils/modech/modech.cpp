@@ -6,6 +6,8 @@
 #include <format>
 #include <vector>
 #include <span>
+#include <cstring>
+
 
 void print_usage() {
     std::cout << std::format("Usage: cryonix_chmod [OPTION] MODE FILE...\n"
@@ -56,9 +58,10 @@ bool change_permissions(const std::string& path, const std::string& mode) {
     struct stat file_stat{};
 
     if (stat(path.c_str(), &file_stat) != 0) {
-        std::cerr << std::format("Error: Could not stat file {}: {}\n", path, strerror(errno));
-        return false;
-    }
+        char err_buf[256];
+        const char* err_msg = strerror_r(errno, err_buf, sizeof(err_buf));
+        std::cerr << "Error: Could not stat file " << path
+                  << ": " << (err_msg ? err_msg : "Unknown error") << "\n";
 
     const mode_t original_mode = file_stat.st_mode;
     mode_t new_mode = original_mode;

@@ -39,8 +39,8 @@ void process_input(std::istream& input, char delim, const std::string& fields, c
             int end = range.find('-') == std::string::npos ? start : std::stoi(range.substr(range.find('-') + 1));
 
             // Extract specified byte range
-            if (start < line.size()) {
-                if (end > line.size()) end = static_cast<int>(line.size());
+            if (start < static_cast<int>(line.size())) {
+                if (end > static_cast<int>(line.size())) end = static_cast<int>(line.size());
                 std::cout << line.substr(start - 1, end - start + 1) << std::endl;
             }
             continue;
@@ -57,7 +57,7 @@ void process_input(std::istream& input, char delim, const std::string& fields, c
 
             // Print the requested fields
             for (size_t i = 0; i < field_numbers.size(); ++i) {
-                if (int field_num = field_numbers[i]; field_num <= tokens.size()) {
+                if (int field_num = field_numbers[i]; field_num <= static_cast<int>(tokens.size())) {
                     std::cout << tokens[field_num - 1];
                 }
                 if (i < field_numbers.size() - 1) {

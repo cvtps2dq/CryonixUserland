@@ -38,7 +38,7 @@ void easter_egg() {
     std::cout << "so no head? :(" << std::endl;
 }
 
-int main(const int argc) {
+int main(const int argc, char** argv) {
     // Check if no arguments were passed
     if (argc == 1) {
         easter_egg();

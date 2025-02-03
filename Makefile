@@ -9,7 +9,7 @@ SRC_DIR = land-utils
 BIN_DIR = bin
 
 # File lists
-SOURCES = $(wildcard $(SRC_DIR)/*/*.cpp)
+SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
 OBJECTS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
 EXECUTABLES = $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%,$(SOURCES))
 

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <filesystem>
+#include <vector>
 
 void print_usage() {
     std::cout << "Usage: mkdir[-p] DIRECTORY...\n"

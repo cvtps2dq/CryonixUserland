@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/sysmacros.h>
 
 void print_usage() {
     std::cout << "Usage: cryonix_mknod FILE TYPE [MAJOR MINOR]\n"

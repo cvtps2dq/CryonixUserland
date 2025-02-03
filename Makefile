@@ -1,6 +1,6 @@
 # Makefile for building each Cryonix utility separately
 
-CC = cmake++
+CC = clang++
 CFLAGS = -std=c++23 -Wall -Wextra -O2 -lz
 BUILD_DIR = build
 SRC_DIR = land-utils
